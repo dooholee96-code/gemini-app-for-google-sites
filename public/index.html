@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 회의록 자동 정리 시스템</title>
+    <meta name="theme-color" content="#e0e0ff"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --md-sys-color-primary: #3d5afe;
+            --md-sys-color-on-primary: #ffffff;
+            --md-sys-color-primary-container: #e0e0ff;
+            --md-sys-color-on-primary-container: #001550;
+            --md-sys-color-secondary: #595d72;
+            --md-sys-color-on-secondary: #ffffff;
+            --md-sys-color-secondary-container: #dde1f9;
+            --md-sys-color-on-secondary-container: #161b2c;
+            --md-sys-color-surface: #fdfbff;
+            --md-sys-color-surface-variant: #e3e2e9;
+            --md-sys-color-on-surface: #1b1b1f;
+            --md-sys-color-on-surface-variant: #46464f;
+            --md-sys-color-outline: #767680;
+            --md-sys-color-success: #2e7d32;
+            --md-sys-color-error: #b71c1c;
+            --shadow-1: 0 1px 2px rgba(0,0,0,.08), 0 1px 1px rgba(0,0,0,.1);
+            --shadow-2: 0 2px 4px rgba(0,0,0,.08), 0 2px 2px rgba(0,0,0,.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--md-sys-color-surface-variant);
+            color: var(--md-sys-color-on-surface-variant);
+            line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 2rem 1.5rem; }
+        .header { text-align: center; margin-bottom: 2rem; }
+        .header p { font-size: 1.1rem; color: var(--md-sys-color-on-surface-variant); margin-top: 0.75rem; max-width: 650px; margin-left: auto; margin-right: auto; }
+        .ai-global-settings { display: flex; flex-direction: column; align-items: center; gap: 0.75rem; margin-bottom: 2.5rem; }
+        .panel { background: var(--md-sys-color-surface); border-radius: 16px; padding: 1.75rem; box-shadow: none; border: 1px solid var(--md-sys-color-outline-variant, #cac4d0); margin-bottom: 1.5rem; }
+        .panel-title { font-size: 1.25rem; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; color: var(--md-sys-color-on-surface); }
+        .main-content { display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem; align-items: flex-start; }
+        .tab-group { display: flex; margin-bottom: 1.5rem; border-bottom: 1px solid var(--md-sys-color-surface-variant); }
+        .tab-btn { padding: 0.75rem 1rem; border: none; background: none; cursor: pointer; font-size: 1rem; font-weight: 500; color: var(--md-sys-color-on-surface-variant); position: relative; transition: var(--transition); border-bottom: 2px solid transparent; }
+        .tab-btn:hover { color: var(--md-sys-color-primary); }
+        .tab-btn.active { color: var(--md-sys-color-primary); font-weight: 700; border-bottom: 2px solid var(--md-sys-color-primary); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .upload-area { display: block; border: 2px dashed var(--md-sys-color-outline); border-radius: 12px; padding: 3rem 1.5rem; text-align: center; transition: var(--transition); background: var(--md-sys-color-surface); position: relative; cursor: pointer; }
+        .upload-area:hover, .upload-area.dragover { border-color: var(--md-sys-color-primary); background-color: var(--md-sys-color-primary-container); }
+        .upload-icon { font-size: 2.5rem; color: var(--md-sys-color-primary); margin-bottom: 1rem; }
+        .upload-text { font-size: 1rem; font-weight: 500; color: var(--md-sys-color-on-surface); margin-bottom: 0.25rem; }
+        .upload-subtext { font-size: 0.875rem; color: var(--md-sys-color-on-surface-variant); }
+        .file-input { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .file-success { margin-top: 1rem; padding: 0.75rem 1rem; background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); border-radius: 8px; font-weight: 500; text-align: center; }
+        .toggle-container { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1.25rem; background: var(--md-sys-color-surface); border-radius: 16px; box-shadow: var(--shadow-1); border: 1px solid var(--md-sys-color-surface-variant); }
+        .toggle-label { font-weight: 700; color: var(--md-sys-color-on-surface); display: flex; align-items: center; gap: 0.75rem; font-size: 1.1rem;}
+        .toggle-container.disabled { opacity: 0.6; cursor: not-allowed; }
+        .toggle-container.disabled .toggle-switch { cursor: not-allowed; }
+        .toggle-switch { position: relative; width: 52px; height: 32px; background: var(--md-sys-color-surface-variant); border-radius: 16px; cursor: pointer; transition: var(--transition); border: 2px solid var(--md-sys-color-outline); }
+        .toggle-switch.active { background: var(--md-sys-color-primary); border-color: var(--md-sys-color-primary); }
+        .toggle-slider { position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; background: var(--md-sys-color-outline); border-radius: 50%; transition: var(--transition); }
+        .toggle-switch.active .toggle-slider { transform: translateX(20px); background: var(--md-sys-color-on-primary); width: 24px; height: 24px; top: 2px; left: 2px; }
+        .local-file-notice { background-color: var(--md-sys-color-secondary-container); color: var(--md-sys-color-on-secondary-container); padding: 0.75rem 1.25rem; border-radius: 12px; text-align: center; font-size: 0.9rem; font-weight: 500; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0.6rem 1.2rem; border: 1px solid var(--md-sys-color-outline); border-radius: 20px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: var(--transition); text-decoration: none; background-color: var(--md-sys-color-surface); color: var(--md-sys-color-primary); }
+        .btn:hover { background-color: var(--md-sys-color-primary-container); border-color: var(--md-sys-color-primary); }
+        .btn.primary { background-color: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border-color: var(--md-sys-color-primary); }
+        .btn.primary:hover { background-color: #304ffe; }
+        .results-container { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        .result-card { position: relative; min-height: 300px; display: flex; flex-direction: column; }
+        .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .action-buttons { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+        .result-content { flex-grow: 1; border: 1px solid var(--md-sys-color-surface-variant); border-radius: 12px; padding: 1.5rem; overflow-y: auto; font-size: 0.9375rem; line-height: 1.7; background: #fff; }
+        .result-content:focus { outline: 2px solid var(--md-sys-color-primary); box-shadow: none; }
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--md-sys-color-on-surface-variant); text-align: center; padding: 2rem; }
+        .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; color: var(--md-sys-color-secondary); }
+        .spinner-container { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(253, 251, 255, 0.9); display: none; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; z-index: 10; border-radius: 16px; }
+        .spinner-container.show { display: flex; }
+        .spinner { width: 32px; height: 32px; border: 4px solid var(--md-sys-color-primary); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner-text { font-weight: 500; color: var(--md-sys-color-on-surface); }
+        .notification { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--md-sys-color-on-surface); color: var(--md-sys-color-surface); border-radius: 8px; padding: 1rem 1.5rem; box-shadow: var(--shadow-2); z-index: 1000; animation: slideUp 0.3s ease; opacity: 0; transition: opacity 0.3s; }
+        .notification.show { opacity: 1; }
+        @keyframes slideUp { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        .notification.success { background-color: var(--md-sys-color-success); color: white; }
+        .notification.error { background-color: var(--md-sys-color-error); color: white; }
+        .record-area { text-align: center; padding: 2rem 0; }
+        .record-btn { background: none; border: none; cursor: pointer; padding: 0; }
+        .record-btn .icon { font-size: 5rem; color: var(--md-sys-color-secondary-container); transition: var(--transition); }
+        .record-btn:hover .icon { color: var(--md-sys-color-secondary); }
+        .record-btn.recording .icon { color: var(--md-sys-color-error); animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .record-status { font-weight: 500; color: var(--md-sys-color-on-surface-variant); margin-top: 1.5rem; height: 2rem; }
+        .record-timer { font-size: 1.5rem; font-weight: 700; color: var(--md-sys-color-on-surface); }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 2000; opacity: 0; transition: opacity 0.3s ease; }
+        .modal-overlay.show { display: flex; opacity: 1; }
+        .modal-content { background: var(--md-sys-color-surface); border-radius: 16px; padding: 2rem; max-width: 700px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; transform: scale(0.95); transition: transform 0.3s ease; }
+        .modal-overlay.show .modal-content { transform: scale(1); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .modal-title { font-size: 1.5rem; font-weight: 700; color: var(--md-sys-color-on-surface); }
+        .modal-body { flex-grow: 1; overflow-y: auto; background: #f9f9f9; border: 1px solid var(--md-sys-color-surface-variant); border-radius: 12px; padding: 1.5rem; white-space: pre-wrap; line-height: 1.7; color: var(--md-sys-color-on-surface-variant); }
+        .modal-footer { margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem; }
+        @media (max-width: 1024px) { .main-content { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <p>음성 또는 텍스트 파일을 올리면, AI가 회의록을 자동 분석하여 두 가지 버전으로 정리해드립니다.</p>
+        </header>
+        <div class="ai-global-settings">
+             <div id="localFileNotice" class="local-file-notice" style="display: none;">
+                💡 AI 기능은 웹사이트에 게시 후 활성화됩니다. (현재 오프라인 모드)
+            </div>
+            <div class="toggle-container" id="toggleContainer">
+                <label class="toggle-label">✨ Gemini AI 사용하기</label>
+                <div class="toggle-switch active" id="aiToggle">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="input-column">
+                <div class="tab-group" id="tabGroup">
+                    <button class="tab-btn active" data-tab="transcript">파일 업로드</button>
+                    <button class="tab-btn" data-tab="voice">실시간 녹음</button>
+                </div>
+                <div id="transcriptContent" class="tab-content active">
+                    <div class="panel">
+                        <label class="upload-area" id="uploadArea" for="fileInput">
+                            <input type="file" id="fileInput" class="file-input" accept=".txt,text/plain,audio/*,.m4a,.mp3,.webm">
+                            <div class="upload-icon">📁</div>
+                            <div class="upload-text">클릭하거나 파일을 드래그하세요</div>
+                            <div class="upload-subtext">지원 형식: 텍스트(.txt) 또는 음성 파일</div>
+                        </label>
+                        <div id="fileSuccess"></div>
+                        <button class="btn primary" id="startProcessingBtn" style="display: none; margin-top: 1rem; width: 100%; justify-content: center;">정리 시작</button>
+                    </div>
+                </div>
+                <div id="voiceContent" class="tab-content">
+                    <div class="panel">
+                        <div class="record-area">
+                            <button id="recordBtn" class="record-btn">
+                                <span class="icon">🎙️</span>
+                            </button>
+                            <div id="recordStatus" class="record-status">
+                                <div class="record-timer">00:00</div>
+                                <div class="record-status-text">버튼을 눌러 녹음을 시작하세요</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="results-container" id="resultsContainer">
+                <div class="panel result-card" id="agendaResultCard">
+                    <div class="result-header">
+                        <h2 class="panel-title" style="margin: 0;">📝 안건별 정리</h2>
+                        <div class="action-buttons">
+                            <button class="btn copy-btn" data-target="agenda" style="display: none;">📋 복사</button>
+                            <button class="btn download-btn" data-target="agenda" data-format="txt" style="display: none;">💾.txt</button>
+                            <button class="btn download-btn" data-target="agenda" data-format="md" style="display: none;">💾.md</button>
+                            <button class="btn email-btn primary" data-target="agenda" style="display: none;">✨ 후속 이메일 초안</button>
+                        </div>
+                    </div>
+                    <div class="result-content" id="agendaResultContent" contenteditable="true">
+                        <div class="empty-state">
+                            <div class="empty-icon">📂</div>
+                            <div>안건별 정리 결과가 여기에 표시됩니다.</div>
+                        </div>
+                    </div>
+                    <div class="spinner-container">
+                        <div class="spinner"></div>
+                        <div class="spinner-text">회의록을 분석 중입니다...</div>
+                    </div>
+                </div>
+                <div class="panel result-card" id="chronoResultCard">
+                     <div class="result-header">
+                        <h2 class="panel-title" style="margin: 0;">⏰ 시간순 정리</h2>
+                        <div class="action-buttons">
+                            <button class="btn copy-btn" data-target="chrono" style="display: none;">📋 복사</button>
+                            <button class="btn download-btn" data-target="chrono" data-format="txt" style="display: none;">💾.txt</button>
+                            <button class="btn download-btn" data-target="chrono" data-format="md" style="display: none;">💾.md</button>
+                             <button class="btn email-btn primary" data-target="chrono" style="display: none;">✨ 후속 이메일 초안</button>
+                        </div>
+                    </div>
+                    <div class="result-content" id="chronoResultContent" contenteditable="true">
+                        <div class="empty-state">
+                             <div class="empty-icon">🕒</div>
+                            <div>시간순 정리 결과가 여기에 표시됩니다.</div>
+                        </div>
+                    </div>
+                    <div class="spinner-container">
+                        <div class="spinner"></div>
+                        <div class="spinner-text">회의록을 분석 중입니다...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-overlay" id="emailModalOverlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">✉️ AI 후속 이메일 초안</h3>
+            </div>
+            <div class="modal-body" id="emailModalBody">
+                <div class="spinner-container show">
+                    <div class="spinner"></div>
+                    <div class="spinner-text">이메일 초안을 작성 중입니다...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="emailModalCloseBtn">닫기</button>
+                <button class="btn primary" id="emailModalCopyBtn">📋 클립보드에 복사</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const state = {
+            file: null, audioBlob: null, rawContent: '', meetingTitle: '',
+            agendaResult: { markdown: '', html: '' }, chronoResult: { markdown: '', html: '' },
+            processing: false, aiEnabled: true, isRecording: false,
+            mediaRecorder: null, audioChunks: [], timerInterval: null, summarizerWorker: null
+        };
+        const elements = {
+            aiToggle: document.getElementById('aiToggle'),
+            toggleContainer: document.getElementById('toggleContainer'),
+            localFileNotice: document.getElementById('localFileNotice'),
+            uploadArea: document.getElementById('uploadArea'),
+            fileInput: document.getElementById('fileInput'),
+            fileSuccess: document.getElementById('fileSuccess'),
+            startProcessingBtn: document.getElementById('startProcessingBtn'),
+            tabGroup: document.getElementById('tabGroup'),
+            transcriptContent: document.getElementById('transcriptContent'),
+            voiceContent: document.getElementById('voiceContent'),
+            recordBtn: document.getElementById('recordBtn'),
+            recordStatus: document.getElementById('recordStatus'),
+            recordTimer: document.querySelector('.record-timer'),
+            recordStatusText: document.querySelector('.record-status-text'),
+            resultsContainer: document.getElementById('resultsContainer'),
+            agendaResult: { card: document.getElementById('agendaResultCard'), content: document.getElementById('agendaResultContent'), spinner: document.querySelector('#agendaResultCard .spinner-container'), buttons: document.querySelectorAll('#agendaResultCard .action-buttons button') },
+            chronoResult: { card: document.getElementById('chronoResultCard'), content: document.getElementById('chronoResultContent'), spinner: document.querySelector('#chronoResultCard .spinner-container'), buttons: document.querySelectorAll('#chronoResultCard .action-buttons button') },
+            emailModal: { overlay: document.getElementById('emailModalOverlay'), body: document.getElementById('emailModalBody'), copyBtn: document.getElementById('emailModalCopyBtn'), closeBtn: document.getElementById('emailModalCloseBtn') }
+        };
+        const summarizerWorkerScript = "const KOREAN_STOPWORDS=new Set(['아','휴','아이구','아이쿠','아이고','어','나','우리','저희','따라','의해','을','를','에','의','가','이','은','는','좀','잘','걍','과','도','을','를','으로','자','에','와','한','하다','그리고','그래서','그러나','그러므로','그런데','하지만','그럼','또','또한','이','그','저','것','수','등','들','및','입니다','습니다','합니다','하고','에서','되','있','하','같','없','주','년','월','일','시','분','초','좀','더','많','큰','작','때문','통해','바로','정말','매우','아주','하나','둘','셋','넷','다섯','여섯','일곱','여덟','아홉','열']);let agendaKeywords={'마케팅/홍보':['마케팅','홍보','광고','캠페인','SNS','고객','유입'],'재무/예산':['예산','비용','수익','매출','투자','재무','결산'],'인사/조직':['채용','인사','조직','팀','역할','평가','보상'],'개발/기술':['개발','기술','시스템','서버','업데이트','릴리즈','버그'],'사업/전략':['사업','전략','신제품','출시','로드맵','목표','KPI']};function tokenize(text){return text.toLowerCase().match(new RegExp('[가-힣a-zA-Z0-9]+','g'))||[]}function calculateWordFrequencies(tokens){const freqs={};for(const token of tokens){if(!KOREAN_STOPWORDS.has(token)&&token.length>1){freqs[token]=(freqs[token]||0)+1}}return freqs}function getKeywords(freqs,count=5){return Object.entries(freqs).sort((a,b)=>b[1]-a[1]).slice(0,count).map(e=>e[0])}function scoreSentences(stmts,freqs){return stmts.map(stmt=>({speaker:stmt.speaker,sentences:(stmt.content.match(new RegExp('[^.!?]+[.!?]*','g'))||[]).map(s=>({text:s.trim(),score:tokenize(s).reduce((acc,t)=>acc+(freqs[t]||0),0)}))}))}function parseContent(content){const speakers=new Set,statements=[],lines=content.split('\\n');let currentSpeaker='미상',currentContent='';const speakerRegex=new RegExp('^\\\\[?(참석자|발화자|화자|Speaker)\\\\s*(\\\\d+|\\\\w+)\\\\]?[:\\\\s]'),timestampRegex=new RegExp('\\\\d{2}:\\\\d{2}(?::\\\\d{2})?'),flush=()=>{const trimmed=currentContent.trim();if(trimmed){speakers.add(currentSpeaker);statements.push({speaker:currentSpeaker,content:trimmed})}currentContent=''};for(const line of lines){const trimmedLine=line.trim();if(!trimmedLine)continue;const match=trimmedLine.match(speakerRegex);if(match){flush();currentSpeaker=match[1]+' '+match[2];currentContent=trimmedLine.substring(match[0].length).trim()}else{currentContent+=(currentContent?' ':'')+trimmedLine.replace(timestampRegex,'').trim()}}flush();if(statements.length===0&&content.trim()){statements.push({speaker:'내용',content:content.trim()});speakers.add('내용')}return{speakers:Array.from(speakers),statements}}function extractActionItems(stmts){const items=[],keywords=['까지','담당','처리','보고','완료','준비','해야','합니다','하기로','하도록'],sentenceRegex=new RegExp('[^.!?]+[.!?]*','g'),datePattern=new RegExp('(\\\\d{1,2}월\\\\s*\\\\d{1,2}일|\\\\d{1,2}\\\\/\\\\d{1,2}|다음\\\\s?주|내일|이번\\\\s?주\\\\s?말)'),personPattern=new RegExp('(\\\\S+)(?:님|께서|씨|가|이)\\\\s');stmts.forEach(stmt=>{(stmt.content.match(sentenceRegex)||[stmt.content]).forEach(s=>{if(keywords.some(k=>s.includes(k))){let person=(s.match(personPattern)||[])[1]||stmt.speaker;if(['미상','내용'].includes(person))person='담당자 미지정';const deadline=(s.match(datePattern)||[])[0]||'기한 미지정';if(s.trim().length<100)items.push('[ ] '+s.trim()+' (담당: '+person+', 기한: '+deadline+')')}})});return[...new Set(items)]}function classifyAgendas(stmts){const classified={},unclassified=[];stmts.forEach(stmt=>{const tokens=tokenize(stmt.content);let bestAgenda=null,maxScore=0;for(const agenda in agendaKeywords){const score=tokens.reduce((acc,token)=>acc+(agendaKeywords[agenda].includes(token)?1:0),0);if(score>maxScore){maxScore=score;bestAgenda=agenda}}if(maxScore>0){if(!classified[bestAgenda])classified[bestAgenda]=[];classified[bestAgenda].push(stmt)}else{unclassified.push(stmt)}});const groups=Object.entries(classified).map(([title,statements])=>({title,statements}));if(unclassified.length>0)groups.push({title:'기타 논의',statements:unclassified});return groups.length>0?groups:[{title:'전체 회의 내용',statements:stmts}]}function generateBasicMarkdown(text,title,useTemplate){if(!text||!text.trim())return'# '+title+'\\n\\n내용이 없습니다.';const{statements}=parseContent(text),freqs=calculateWordFrequencies(tokenize(text)),summary=(scoreSentences(statements,freqs).flatMap(s=>s.sentences).sort((a,b)=>b.score-a.score)[0]||{}).text||'핵심 요약을 생성할 수 없습니다.',keywords=getKeywords(freqs,5),actionItems=extractActionItems(statements);let md='# '+title+' (오프라인 요약)\\n\\n## 📝 한 줄 요약\\n'+summary+'\\n\\n## 🔑 핵심 키워드\\n- '+keywords.join(', ')+'\\n\\n## ✅ 실행 항목 (Action Items)\\n';md+=(actionItems.length>0?actionItems.map(item=>'- '+item).join('\\n'):'추출된 실행 항목이 없습니다.')+'\\n\\n';md+='## 💬 상세 내용\\n';const groups=useTemplate?classifyAgendas(statements):[{title:'시간순 발언 내용',statements}];if(groups.length>0){groups.forEach(g=>{md+='### '+g.title+'\\n';md+=g.statements.map(s=>'**'+s.speaker+':** '+s.content).join('\\n\\n')+'\\n\\n'})}else{md+='정리할 내용이 없습니다.\\n'}return md}self.onmessage=e=>{const{type,payload}=e.data;if(type==='summarize'){try{const{textContent,title,useTemplate}=payload,markdown=generateBasicMarkdown(textContent,title,useTemplate);self.postMessage({type:'summarize_result',payload:{markdown}})}catch(err){self.postMessage({type:'error',payload:{message:err.message}})}}else if(type==='update_keywords'){const learned=payload.keywords;for(const cat in learned){if(!agendaKeywords[cat])agendaKeywords[cat]=[];const newSet=new Set([...agendaKeywords[cat],...learned[cat]]);agendaKeywords[cat]=Array.from(newSet)}}};";
+        function showSpinners(text) { [elements.agendaResult, elements.chronoResult].forEach(result => { result.spinner.querySelector('.spinner-text').textContent = text; result.spinner.classList.add('show'); result.content.innerHTML = ''; }); }
+        function hideSpinners() { [elements.agendaResult, elements.chronoResult].forEach(result => { result.spinner.classList.remove('show'); }); }
+        function showNotification(message, type = 'success') { const notification = document.createElement('div'); notification.className = "notification " + type; notification.textContent = message; document.body.appendChild(notification); setTimeout(() => notification.classList.add('show'), 10); setTimeout(() => { notification.classList.remove('show'); setTimeout(() => notification.remove(), 3000); }, 3000); }
+        function handleFile(file) { try { if (!file) return; state.file = file; state.meetingTitle = file.name.split('.').slice(0, -1).join('.') || file.name; elements.fileSuccess.innerHTML = '<div class="file-success">✅ ' + file.name + '</div>'; elements.startProcessingBtn.style.display = 'inline-flex'; if (file.type.startsWith('audio/')) { state.audioBlob = file; state.rawContent = ''; } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) { const reader = new FileReader(); reader.onload = e => { state.rawContent = e.target.result; state.audioBlob = null; }; reader.onerror = () => showNotification('파일 읽기 오류', 'error'); reader.readAsText(file, 'UTF-8'); } else { showNotification('지원하지 않는 파일 형식: ' + (file.type || '알 수 없음'), 'error'); elements.fileSuccess.innerHTML = ''; elements.startProcessingBtn.style.display = 'none'; } } catch (error) { showNotification('파일 처리 중 오류가 발생했습니다.', 'error'); } }
+        async function startProcessing() { if (state.processing) return; state.processing = true; elements.startProcessingBtn.style.display = 'none'; elements.fileSuccess.innerHTML = ''; const isAudio = !!state.audioBlob; if (isAudio && !state.aiEnabled) { showNotification('음성 파일은 AI 사용 모드에서만 처리 가능합니다.', 'error'); state.processing = false; return; } showSpinners(isAudio ? '음성 분석 및 회의록 정리 중...' : '회의록 정리 중...'); try { const [agendaResult, chronoResult] = await Promise.all([generateReport(true), generateReport(false)]); state.agendaResult = agendaResult; state.chronoResult = chronoResult; elements.agendaResult.content.innerHTML = agendaResult.html; elements.chronoResult.content.innerHTML = chronoResult.html; document.querySelectorAll('.action-buttons button').forEach(b => b.style.display = 'inline-flex'); showNotification('회의록 정리가 완료되었습니다!', 'success'); } catch (error) { console.error('Processing Error:', error); showNotification('오류: ' + error.message, 'error'); const errorHtml = '<div class="empty-state">오류가 발생했습니다.</div>'; elements.agendaResult.content.innerHTML = errorHtml; elements.chronoResult.content.innerHTML = errorHtml; } finally { state.processing = false; } }
+        async function generateReport(useTemplate, taskPrompt) { if (state.aiEnabled) { const prompt = taskPrompt || createAIPrompt(state.rawContent, state.meetingTitle, useTemplate); const requestBody = { contents: [{ parts: [{ text: prompt }] }] }; if (state.audioBlob) { const base64Audio = await blobToBase64(state.audioBlob); requestBody.contents[0].parts.push({ inline_data: { mime_type: state.audioBlob.type, data: base64Audio } }); } try { const markdown = await callProxyAPI(requestBody); if(!markdown) throw new Error("API로부터 빈 응답을 받았습니다."); const html = formatMarkdownToHtml(markdown); return { markdown, html }; } catch (error) { console.error("API Call failed:", error); showNotification("API 호출에 실패했습니다: " + error.message, "error"); const mockMarkdown = getMockMarkdown(prompt.includes("이메일 초안")); const mockHtml = formatMarkdownToHtml(mockMarkdown); return { markdown: mockMarkdown, html: mockHtml, isMock: true }; } } else { return new Promise((resolve, reject) => { const handleWorkerMessage = (event) => { const { type, payload } = event.data; state.summarizerWorker.removeEventListener('message', handleWorkerMessage); if (type === 'error') { reject(new Error(payload.message)); } else if (type === 'summarize_result') { const html = formatMarkdownToHtml(payload.markdown); resolve({ markdown: payload.markdown, html }); } }; state.summarizerWorker.addEventListener('message', handleWorkerMessage); state.summarizerWorker.postMessage({ type: 'summarize', payload: { textContent: state.rawContent, title: state.meetingTitle, useTemplate } }); }); } }
+        function getMockMarkdown(isEmail) { const title = state.meetingTitle || "샘플 회의"; if (isEmail) { return `[AI 목업 응답]\n\n제목: ${title} 회의 후속 조치 안내\n\n안녕하세요, [이름]입니다.\n\n지난 ${title} 회의에 참석해주셔서 감사합니다.\n주요 논의 사항과 결정된 실행 항목을 아래와 같이 공유드립니다.\n\n- 실행 항목 1\n- 실행 항목 2\n\n감사합니다.\n[이름] 드림`; } else { return `# ${title} (AI 목업 응답)\n\n## 회의 개요\nAI 호출에 실패하여 목업 데이터가 표시됩니다. Netlify 배포 환경의 API 키 설정을 확인해주세요.\n\n## 실행 항목 (Action Items)\n- [ ] 담당자 1: 목업 데이터 확인하기 (기한: 즉시)\n\n## 상세 내용\n이 내용은 실제 AI가 생성한 것이 아니며, 네트워크 오류 발생 시 UI 테스트를 위해 표시되는 임시 데이터입니다.`; } }
+        function createAIPrompt(content, title, useTemplate) { const templateInstruction = useTemplate ? "1. **안건 추출**: 회의 내용에서 핵심 안건을 3~5개 추출합니다.\n2. **안건별 정리**: 각 안건에 대해 주요 내용, 결정 사항, 핵심 발언을 정리합니다." : "시간순으로 발언 내용을 요약하고 정리합니다. 발언자를 명시하고, 불필요한 부분은 제거하여 가독성을 높여주세요."; let prompt = "당신은 회의록 정리 전문가입니다. 다음 내용을 분석하여 지정된 형식에 맞춰 명확하고 간결한 한국어 Markdown 회의록을 생성해주세요.\n\n**회의 제목**: " + title + "\n\n**정리 형식**:\n- **회의 개요**: 회의의 목적과 핵심 결과를 1~2 문장으로 요약합니다.\n- **실행 항목 (Action Items)**: 누가, 무엇을, 언제까지 해야 하는지 명확하게 정리된 할 일 목록입니다. 항목이 없다면 '해당 없음'으로 표시해주세요.\n- **화자별 주요 발언**: 텍스트를 분석하여 화자를 '참석자 1', '참석자 2' 등으로 구분하고, 각 화자의 핵심 발언을 1~2개씩 요약합니다.\n- **상세 내용**:\n    " + templateInstruction; if (content) prompt += "\n\n**원본 회의록**:\n---\n" + content + "\n---"; return prompt; }
+        async function callProxyAPI(requestBody) { const url = "/.netlify/functions/gemini"; const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(requestBody) }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.error.message || "API 요청 실패: " + response.status); } const data = await response.json(); return data.candidates?.[0]?.content?.parts?.[0]?.text; }
+        const formatMarkdownToHtml = markdownText => { if (!markdownText) return '<div class="empty-state">결과를 생성하지 못했습니다.</div>'; return markdownText.replace(/^### (.*$)/gim, '<h4>$1</h4>').replace(/^## (.*$)/gim, '<h3>$1</h3>').replace(/^# (.*$)/gim, '<h2>$1</h2>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\[ \]/g, '⬜').replace(/\[x\]/g, '✅').replace(/^\s*-\s*\[\s*\]\s*(.*$)/gim, '<li>⬜ $1</li>').replace(/^\s*-\s*(?!\[)(.*$)/gim, '<li>$1</li>').replace(/<\/li><li>/g, '</li>\n<li>').replace(/\n/g, '<br>'); }
+        const blobToBase64 = blob => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result.split(',')[1]); reader.onerror = reject; reader.readAsDataURL(blob); });
+        function handleCopy(e) { const target = e.currentTarget.dataset.target; navigator.clipboard.writeText(elements[target + 'Result'].content.innerText) .then(() => showNotification('클립보드에 복사되었습니다.', 'success')) .catch(() => showNotification('복사에 실패했습니다.', 'error')); }
+        function handleDownload(e) { const target = e.currentTarget.dataset.target; const format = e.currentTarget.dataset.format; const isMarkdown = format === 'md'; const content = isMarkdown ? state[target + 'Result'].markdown : elements[target + 'Result'].content.innerText; const mimeType = isMarkdown ? 'text/markdown;charset=utf-8' : 'text/plain;charset=utf-8'; const fileName = state.meetingTitle + '-' + target + '.' + format; const blob = new Blob([content], { type: mimeType }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); showNotification("'" + fileName + "' 다운로드를 시작합니다.", 'success'); }
+        async function handleGenerateEmail(e) { const target = e.currentTarget.dataset.target; const markdown = state[target + 'Result'].markdown; if (!markdown) { showNotification('이메일을 생성할 회의록 내용이 없습니다.', 'error'); return; } elements.emailModal.overlay.classList.add('show'); elements.emailModal.body.innerHTML = '<div class="spinner-container show"><div class="spinner"></div><div class="spinner-text">이메일 초안을 작성 중입니다...</div></div>'; const prompt = `당신은 비즈니스 커뮤니케이션 전문가입니다. 다음 회의록 요약본을 바탕으로, 회의 참석자들에게 보내는 전문적인 후속 조치 이메일 초안을 한국어로 작성해주세요. 이메일에는 다음 내용이 포함되어야 합니다:\n\n1. 간단한 인사와 회의 주제 언급\n2. 논의된 핵심 결정 사항 요약\n3. 실행 항목(Action Items)을 명확한 목록 형태로 정리 (담당자, 기한 포함)\n4. 마무리 인사\n\n전체적으로 간결하고 프로페셔널한 톤을 유지해주세요.\n\n**회의록 요약:**\n---\n${markdown}\n---`; try { const requestBody = { contents: [{ parts: [{ text: prompt }] }] }; const emailDraft = await callProxyAPI(requestBody); if(!emailDraft) throw new Error("API로부터 빈 응답을 받았습니다."); elements.emailModal.body.innerText = emailDraft; } catch (error) { elements.emailModal.body.innerText = '이메일 생성에 실패했습니다: ' + error.message; showNotification("이메일 생성에 실패했습니다.", "error"); } }
+        function startTimer() { let seconds = 0; elements.recordTimer.textContent = '00:00'; state.timerInterval = setInterval(() => { seconds++; const min = String(Math.floor(seconds / 60)).padStart(2, '0'); const sec = String(seconds % 60).padStart(2, '0'); elements.recordTimer.textContent = min + ':' + sec; }, 1000); }
+        function stopTimer() { clearInterval(state.timerInterval); }
+        async function startRecording() { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: true }); state.isRecording = true; elements.recordBtn.classList.add('recording'); elements.recordStatusText.textContent = '녹음 중... 버튼을 눌러 중지'; startTimer(); state.audioChunks = []; state.mediaRecorder = new MediaRecorder(stream); state.mediaRecorder.ondataavailable = e => state.audioChunks.push(e.data); state.mediaRecorder.onstop = () => { const audioBlob = new Blob(state.audioChunks, { type: 'audio/webm' }); state.audioBlob = audioBlob; state.rawContent = ''; const now = new Date(); state.meetingTitle = '녹음-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0'); elements.fileSuccess.innerHTML = '<div class="file-success">✅ ' + state.meetingTitle + '.webm (녹음 완료)</div>'; stream.getTracks().forEach(track => track.stop()); startProcessing(); }; state.mediaRecorder.start(); } catch (err) { showNotification('마이크 접근 권한이 필요합니다.', 'error'); } }
+        function stopRecording() { if (state.mediaRecorder?.state === 'recording') state.mediaRecorder.stop(); state.isRecording = false; elements.recordBtn.classList.remove('recording'); elements.recordStatusText.textContent = '버튼을 눌러 녹음을 시작하세요'; stopTimer(); }
+        function setupEventListeners() { elements.aiToggle.addEventListener('click', () => { if (elements.toggleContainer.classList.contains('disabled')) return; state.aiEnabled = !state.aiEnabled; elements.aiToggle.classList.toggle('active', state.aiEnabled); showNotification(state.aiEnabled ? 'Gemini AI 모드가 활성화되었습니다.' : '오프라인 요약 모드가 활성화되었습니다.', 'success'); }); elements.tabGroup.addEventListener('click', e => { if (e.target.tagName !== 'BUTTON') return; elements.tabGroup.querySelector('.active').classList.remove('active'); e.target.classList.add('active'); elements.transcriptContent.classList.toggle('active', e.target.dataset.tab === 'transcript'); elements.voiceContent.classList.toggle('active', e.target.dataset.tab === 'voice'); }); elements.fileInput.addEventListener('change', (event) => { if (event.target.files.length > 0) handleFile(event.target.files[0]); }); elements.startProcessingBtn.addEventListener('click', startProcessing); ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => { elements.uploadArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); elements.uploadArea.classList.toggle('dragover', ['dragenter', 'dragover'].includes(eventName)); if (eventName === 'drop' && e.dataTransfer.files.length > 0) handleFile(e.dataTransfer.files[0]); }); }); elements.recordBtn.addEventListener('click', () => { state.isRecording ? stopRecording() : startRecording(); }); elements.resultsContainer.addEventListener('click', e => { const targetBtn = e.target.closest('button'); if (!targetBtn) return; if (targetBtn.classList.contains('copy-btn')) handleCopy(e); else if (targetBtn.classList.contains('download-btn')) handleDownload(e); else if (targetBtn.classList.contains('email-btn')) handleGenerateEmail(e); }); elements.emailModal.closeBtn.addEventListener('click', () => { elements.emailModal.overlay.classList.remove('show'); }); elements.emailModal.copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(elements.emailModal.body.innerText) .then(() => showNotification('이메일 초안이 복사되었습니다.', 'success')) .catch(() => showNotification('복사에 실패했습니다.', 'error')); }); }
+        document.addEventListener('DOMContentLoaded', () => { const isLocalFile = window.location.protocol === 'file:'; if (isLocalFile) { state.aiEnabled = false; elements.aiToggle.classList.remove('active'); elements.toggleContainer.classList.add('disabled'); elements.localFileNotice.style.display = 'block'; } if (window.Worker) { try { const workerBlob = new Blob([summarizerWorkerScript], { type: 'application/javascript' }); const workerUrl = URL.createObjectURL(workerBlob); state.summarizerWorker = new Worker(workerUrl); const learnedKeywords = JSON.parse(localStorage.getItem('learnedKeywords')); if (learnedKeywords) { state.summarizerWorker.postMessage({ type: 'update_keywords', payload: { keywords: learnedKeywords }}); } } catch (e) { console.error("Failed to create worker:", e); } } else { console.warn('Web Workers are not supported in this browser.'); } setupEventListeners(); });
+    </script>
+</body>
+</html>
+
