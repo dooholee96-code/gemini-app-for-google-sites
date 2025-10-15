@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # netlify.toml
 [build]
   publish = "public"
@@ -5,3 +6,12 @@
 [functions]
   directory = "functions"
   node_bundler = "esbuild"
+=======
+# netlify.toml
+[build]
+  publish = "public"
+
+[functions]
+  directory = "functions"
+  node_bundler = "esbuild"
+>>>>>>> 6ad3366252c5bf416d7acb789723ace33dbcb9ff
