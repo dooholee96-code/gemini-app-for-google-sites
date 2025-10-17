@@ -7,7 +7,7 @@ exports.handler = async (event) => {
 
   try {
     const requestBody = JSON.parse(event.body);
-    const apiUrl = `https://generativellanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+    const apiUrl = `https://generativellanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
     const fetch = (await import('node-fetch')).default;
     
     const response = await fetch(apiUrl, {
