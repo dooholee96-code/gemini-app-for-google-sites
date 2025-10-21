@@ -1,3 +1,4 @@
+// Force redeployment with this comment - v2
 export default {
   async fetch(req, env) {
     if (req.method === "OPTIONS") {
